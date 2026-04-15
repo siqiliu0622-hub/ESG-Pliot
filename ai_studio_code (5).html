@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智建海外 ESG 数字化管理平台 - 小奈定制优化版</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=JetBrains+Mono&display=swap');
+        body { font-family: 'Noto Sans SC', sans-serif; background-color: #020617; color: #f8fafc; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .animate-pulse-slow { animation: pulse-slow 3s infinite; }
+        .mobile-frame { width: 320px; height: 620px; border: 12px solid #1e293b; border-radius: 40px; overflow-y: auto; background: #f8fafc; color: #1e293b; }
+        .transition-all { transition: all 0.3s ease; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useEffect, useState } = React;
+
+        const api = {
+            get: async (url) => {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Request failed: ${response.status}`);
+                }
+                return response.json();
+            },
+            post: async (url, payload) => {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || `Request failed: ${response.status}`);
+                }
+                return data;
+            }
+        };
+
+        const ICON_PATHS = {
+            "cpu": (
+                <>
+                    <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                    <rect x="8" y="8" width="8" height="8" rx="1"></rect>
+                    <path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"></path>
+                </>
+            ),
+            "zap": <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path>,
+            "map": (
+                <>
+                    <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2V6z"></path>
+                    <path d="M9 4v14"></path>
+                    <path d="M15 6v14"></path>
+                </>
+            ),
+            "globe": (
+                <>
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M2 12h20"></path>
+                    <path d="M12 2a15 15 0 0 1 0 20"></path>
+                    <path d="M12 2a15 15 0 0 0 0 20"></path>
+                </>
+            ),
+            "x": (
+                <>
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                </>
+            ),
+            "alert-triangle": (
+                <>
+                    <path d="m10.3 3.9-8.2 14.2A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0z"></path>
+                    <path d="M12 9v4"></path>
+                    <path d="M12 17h.01"></path>
+                </>
+            ),
+            "download": (
+                <>
+                    <path d="M12 3v12"></path>
+                    <path d="m7 10 5 5 5-5"></path>
+                    <path d="M5 21h14"></path>
+                </>
+            ),
+            "check-circle": (
+                <>
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="m9 12 2 2 4-4"></path>
+                </>
+            ),
+            "camera": (
+                <>
+                    <path d="M4 7h3l2-3h6l2 3h3v12H4z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </>
+            ),
+            "map-pin": (
+                <>
+                    <path d="M12 21s-6-5.3-6-11a6 6 0 1 1 12 0c0 5.7-6 11-6 11z"></path>
+                    <circle cx="12" cy="10" r="2.5"></circle>
+                </>
+            ),
+            "leaf": (
+                <>
+                    <path d="M11 20A7 7 0 0 1 18 4c0 7-3 11-7 16z"></path>
+                    <path d="M6 20A5 5 0 0 1 6 10c3 0 5 2 5 5 0 2-2 5-5 5z"></path>
+                </>
+            ),
+            "shield-check": (
+                <>
+                    <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"></path>
+                    <path d="m9 12 2 2 4-4"></path>
+                </>
+            ),
+            "shopping-cart": (
+                <>
+                    <circle cx="9" cy="19" r="1.5"></circle>
+                    <circle cx="17" cy="19" r="1.5"></circle>
+                    <path d="M3 4h2l2.2 10.5a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 7H6"></path>
+                </>
+            ),
+            "users": (
+                <>
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.9"></path>
+                    <path d="M16 3.1a4 4 0 0 1 0 7.8"></path>
+                </>
+            ),
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const icon = ICON_PATHS[name] || <circle cx="12" cy="12" r="8"></circle>;
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    width={size}
+                    height={size}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={className}
+                    aria-hidden="true"
+                >
+                    {icon}
+                </svg>
+            );
+        };
+
+        const LoadingCard = ({ text = "数据加载中..." }) => (
+            <div className="glass-card p-8 rounded-3xl text-slate-400 text-sm">{text}</div>
+        );
+
+        const ErrorCard = ({ text = "数据加载失败" }) => (
+            <div className="glass-card p-8 rounded-3xl border border-rose-500/20 text-rose-400 text-sm">{text}</div>
+        );
+
+        const accentMap = {
+            amber: {
+                border: "border-amber-500",
+                text: "text-amber-500"
+            },
+            emerald: {
+                border: "border-emerald-500",
+                text: "text-emerald-500"
+            },
+            blue: {
+                border: "border-blue-500",
+                text: "text-blue-500"
+            }
+        };
+
+        const AIComplianceModule = () => {
+            const [standards, setStandards] = useState([]);
+            const [selectedStandards, setSelectedStandards] = useState([]);
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [error, setError] = useState("");
+
+            useEffect(() => {
+                const loadStandards = async () => {
+                    try {
+                        const data = await api.get("/api/compliance/standards");
+                        setStandards(data.standards || []);
+                        setSelectedStandards([]);
+                    } catch (err) {
+                        setError("合规标准加载失败");
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                loadStandards();
+            }, []);
+
+            const toggleStandard = (std) => {
+                setSelectedStandards((current) =>
+                    current.includes(std)
+                        ? current.filter((item) => item !== std)
+                        : [...current, std]
+                );
+            };
+
+            const handleGenerate = async () => {
+                setIsGenerating(true);
+                setError("");
+                try {
+                    const data = await api.post("/api/compliance/generate", {
+                        selected_standards: selectedStandards,
+                    });
+                    setResult(data);
+                } catch (err) {
+                    setError(err.message || "执行方案生成失败");
+                } finally {
+                    setIsGenerating(false);
+                }
+            };
+
+            if (loading) return <LoadingCard text="正在加载合规标准..." />;
+            if (error && standards.length === 0) return <ErrorCard text={error} />;
+
+            return (
+                <div className="space-y-6">
+                    <div className="glass-card p-8 rounded-3xl">
+                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Icon name="cpu" className="text-emerald-500" /> AI 合规标准引擎</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+                            {standards.map((item) => (
+                                <div
+                                    key={item.name}
+                                    onClick={() => toggleStandard(item.name)}
+                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center gap-2 text-[11px] ${
+                                        selectedStandards.includes(item.name)
+                                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 font-bold'
+                                            : 'bg-slate-900/50 border-white/5 text-slate-500'
+                                    }`}
+                                >
+                                    <span
+                                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                            selectedStandards.includes(item.name)
+                                                ? 'border-emerald-500 bg-emerald-500/15'
+                                                : 'border-slate-700 bg-transparent'
+                                        }`}
+                                    >
+                                        {selectedStandards.includes(item.name) ? (
+                                            <span className="text-[10px] leading-none text-emerald-500 font-black">✓</span>
+                                        ) : null}
+                                    </span>
+                                    {item.name}
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={handleGenerate}
+                            disabled={selectedStandards.length === 0 || isGenerating}
+                            className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+                                selectedStandards.length === 0
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20'
+                            }`}
+                        >
+                            {isGenerating ? "AI 深度计算中..." : "生成唯一执行方案"}
+                        </button>
+
+                        {error && <p className="mt-4 text-sm text-rose-400">{error}</p>}
+
+                        {result && (
+                            <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
+                                <div className="flex items-center gap-2 text-emerald-400 font-bold mb-4 italic uppercase tracking-widest text-sm">
+                                    <Icon name="zap" size={16} /> {result.path}
+                                </div>
+                                {result.details.map((item, idx) => (
+                                    <div key={idx} className="bg-slate-900/50 p-5 rounded-2xl border border-emerald-500/10 flex gap-4">
+                                        <div className="text-emerald-500 font-bold text-lg">0{idx + 1}</div>
+                                        <div>
+                                            <h4 className="font-bold text-white text-sm mb-1">{item.title}</h4>
+                                            <p className="text-xs text-slate-400 leading-relaxed">{item.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const IoTMonitoringModule = () => {
+            const [monitoring, setMonitoring] = useState({ metrics: [], points: [] });
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState("");
+
+            useEffect(() => {
+                const loadMonitoring = async () => {
+                    try {
+                        setMonitoring(await api.get("/api/monitoring"));
+                    } catch (err) {
+                        setError("监测数据加载失败");
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                loadMonitoring();
+            }, []);
+
+            if (loading) return <LoadingCard text="正在加载现场监测数据..." />;
+            if (error) return <ErrorCard text={error} />;
+
+            return (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {monitoring.metrics.map((metric, index) => {
+                            const accent = accentMap[metric.accent] || accentMap.emerald;
+                            return (
+                                <div key={index} className={`glass-card p-6 rounded-3xl border-l-4 ${accent.border}`}>
+                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-2">{metric.name}</p>
+                                    <div className="flex items-end gap-2">
+                                        <h3 className="text-4xl font-black text-white mono tracking-tighter">{metric.value}</h3>
+                                        <span className={`text-xs mb-1 font-bold ${accent.text}`}>{metric.unit} ({metric.status})</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="glass-card p-8 rounded-[2.5rem]">
+                        <h3 className="font-bold text-lg mb-6 flex items-center justify-between">现场环境监测点布局实时状态图</h3>
+                        <div className="relative h-80 bg-slate-900/50 rounded-2xl border border-white/5 flex items-center justify-center overflow-hidden">
+                            <div className="absolute inset-0 opacity-10 bg-[url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/106.8,-6.2,16,0/1200x800?access_token=none')] bg-cover"></div>
+                            <div className="relative w-full h-full p-10">
+                                {monitoring.points.map((point, index) => {
+                                    const color = point.status === "warning" ? "bg-amber-500" : "bg-emerald-500";
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="absolute group cursor-pointer"
+                                            style={{ top: point.top_percent, left: point.left_percent }}
+                                            title={`${point.name} - ${point.status}`}
+                                        >
+                                            <div className={`w-4 h-4 ${color} rounded-full animate-ping absolute`}></div>
+                                            <div className={`w-4 h-4 ${color} rounded-full relative border-2 border-white shadow-lg`}></div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SupplyChainModule = () => {
+            const [suppliers, setSuppliers] = useState([]);
+            const [orders, setOrders] = useState([]);
+            const [selectedSupplier, setSelectedSupplier] = useState(null);
+            const [selectedOrder, setSelectedOrder] = useState(null);
+            const [projectName, setProjectName] = useState("海外园区样板项目");
+            const [contactName, setContactName] = useState("张经理");
+            const [quantity, setQuantity] = useState(10);
+            const [submitting, setSubmitting] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState("");
+            const [submitMessage, setSubmitMessage] = useState("");
+            const [orderFilter, setOrderFilter] = useState("all");
+            const [payingOrder, setPayingOrder] = useState(null);
+            const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+            const [paymentReference, setPaymentReference] = useState("");
+            const [paying, setPaying] = useState(false);
+
+            const statusMap = {
+                pending_payment: { label: "待支付", className: "text-amber-400" },
+                completed: { label: "已完成", className: "text-emerald-400" },
+            };
+
+            const paymentMethodMap = {
+                bank_transfer: "银行转账",
+                alipay: "支付宝",
+                wechat_pay: "微信支付",
+            };
+
+            const formatCurrency = (value) =>
+                new Intl.NumberFormat("zh-CN", {
+                    style: "currency",
+                    currency: "CNY",
+                    maximumFractionDigits: 2,
+                }).format(Number(value || 0));
+
+            const parseSupplierPrice = (rawPrice) => {
+                if (!rawPrice) return 0;
+                let text = String(rawPrice).replace("¥", "").replace(/,/g, "");
+                if (text.includes("/")) text = text.split("/")[0];
+                let multiplier = 1;
+                if (text.endsWith("w")) {
+                    text = text.slice(0, -1);
+                    multiplier = 10000;
+                }
+                const number = Number(text);
+                return Number.isFinite(number) ? number * multiplier : 0;
+            };
+
+            const loadSupplyData = async (filter = orderFilter) => {
+                try {
+                    const query = filter === "all" ? "" : `?status=${filter}`;
+                    const [supplierData, orderData] = await Promise.all([
+                        api.get("/api/suppliers"),
+                        api.get(`/api/orders${query}`),
+                    ]);
+                    const supplierList = supplierData.suppliers || [];
+                    const orderList = orderData.orders || [];
+                    setSuppliers(supplierList);
+                    setOrders(orderList);
+                    setSelectedSupplier((current) => {
+                        if (current) {
+                            return supplierList.find((item) => item.id === current.id) || supplierList[0] || null;
+                        }
+                        return supplierList[0] || null;
+                    });
+                    setSelectedOrder((current) => {
+                        if (current) {
+                            return orderList.find((item) => item.id === current.id) || orderList[0] || null;
+                        }
+                        return orderList[0] || null;
+                    });
+                    setError("");
+                } catch (err) {
+                    setError("供应链数据加载失败");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                loadSupplyData(orderFilter);
+            }, [orderFilter]);
+
+            const currentUnitPrice = selectedSupplier
+                ? parseSupplierPrice(selectedSupplier.price)
+                : 0;
+
+            const handleCreateOrder = async () => {
+                if (!selectedSupplier) {
+                    setSubmitMessage("请先选择供应商");
+                    return;
+                }
+                if (!projectName.trim() || !contactName.trim()) {
+                    setSubmitMessage("请填写项目名称和联系人");
+                    return;
+                }
+
+                setSubmitting(true);
+                setSubmitMessage("");
+                try {
+                    const createdOrder = await api.post("/api/orders", {
+                        supplier_id: selectedSupplier.id,
+                        project_name: projectName,
+                        contact_name: contactName,
+                        quantity,
+                    });
+                    if (orderFilter === "all" || orderFilter === createdOrder.status) {
+                        setOrders((current) => [createdOrder, ...current].slice(0, 20));
+                    }
+                    setSelectedOrder(createdOrder);
+                    setPayingOrder(createdOrder);
+                    setPaymentReference(`PAY-${createdOrder.id}-${Date.now().toString().slice(-6)}`);
+                    setSubmitMessage(`订单已创建，待支付：${createdOrder.supplier_name} / ${createdOrder.quantity}${createdOrder.unit}`);
+                } catch (err) {
+                    setSubmitMessage(err.message || "下单失败");
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+
+            const openPayModal = (order) => {
+                setPayingOrder(order);
+                setPaymentMethod("bank_transfer");
+                setPaymentReference(`PAY-${order.id}-${Date.now().toString().slice(-6)}`);
+            };
+
+            const handlePayOrder = async () => {
+                if (!payingOrder) return;
+                if (!paymentReference.trim()) {
+                    setSubmitMessage("请填写支付流水号");
+                    return;
+                }
+                setPaying(true);
+                try {
+                    const paidOrder = await api.post(`/api/orders/${payingOrder.id}/pay`, {
+                        payment_method: paymentMethod,
+                        payment_reference: paymentReference,
+                    });
+                    if (orderFilter === "pending_payment") {
+                        setOrders((current) => current.filter((item) => item.id !== paidOrder.id));
+                        setSelectedOrder((current) => (current && current.id === paidOrder.id ? null : current));
+                    } else {
+                        setOrders((current) => current.map((item) => (item.id === paidOrder.id ? paidOrder : item)));
+                        setSelectedOrder((current) => (current && current.id === paidOrder.id ? paidOrder : current));
+                    }
+                    setSubmitMessage(`订单 ${paidOrder.id} 已完成付款`);
+                    setPayingOrder(null);
+                } catch (err) {
+                    setSubmitMessage(err.message || "付款失败");
+                } finally {
+                    setPaying(false);
+                }
+            };
+
+            const handleViewOrder = async (orderId) => {
+                try {
+                    const detail = await api.get(`/api/orders/${orderId}`);
+                    setSelectedOrder(detail);
+                } catch (err) {
+                    setSubmitMessage("订单详情加载失败");
+                }
+            };
+
+            if (loading) return <LoadingCard text="正在加载供应链生态数据..." />;
+            if (error) return <ErrorCard text={error} />;
+
+            return (
+                <div className="space-y-6">
+                    <div className="glass-card p-6 rounded-[2.5rem] h-80 relative overflow-hidden flex flex-col items-center justify-center">
+                        <div className="absolute inset-0 bg-slate-950 opacity-40">
+                            <Icon name="map" size={300} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-800 opacity-20" />
+                        </div>
+                        <div className="relative z-10 text-center">
+                            <Icon name="globe" size={48} className="text-emerald-500 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold uppercase tracking-widest italic">供应链全球生态图层</h3>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-6 text-center">
+                        <div className="bg-slate-900/50 p-4 rounded-2xl border border-emerald-500/20">
+                            <p className="text-[10px] text-emerald-500 font-bold mb-1 tracking-tighter uppercase">解决方案</p>
+                            <p className="text-xs text-slate-300">消除 12% 绿色溢价成本</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-4 rounded-2xl border border-blue-500/20">
+                            <p className="text-[10px] text-blue-500 font-bold mb-1 tracking-tighter uppercase">执行政策</p>
+                            <p className="text-xs text-slate-300">T/CHINCA 环境议题对标</p>
+                        </div>
+                        <div className="bg-slate-900/50 p-4 rounded-2xl border border-purple-500/20">
+                            <p className="text-[10px] text-purple-500 font-bold mb-1 tracking-tighter uppercase">方法论</p>
+                            <p className="text-xs text-slate-300">LCA 生命周期碳足迹</p>
+                        </div>
+                    </div>
+
+                    <div className="glass-card rounded-[2rem] overflow-hidden">
+                        <table className="w-full text-left text-sm font-italic">
+                            <tbody className="divide-y divide-white/5 italic">
+                                {suppliers.map((supplier) => (
+                                    <tr key={supplier.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="p-5 font-bold">{supplier.name}</td>
+                                        <td className="p-5 text-slate-400 text-xs">{supplier.product}</td>
+                                        <td className="p-5 text-emerald-400 font-bold mono">{supplier.price}</td>
+                                        <td className="p-5 text-right">
+                                            <button
+                                                onClick={() => setSelectedSupplier(supplier)}
+                                                className={`px-4 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                                                    selectedSupplier && selectedSupplier.id === supplier.id
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : 'bg-emerald-600 text-white'
+                                                }`}
+                                            >
+                                                {selectedSupplier && selectedSupplier.id === supplier.id ? "已选择" : supplier.action_label}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_1.2fr_1fr] gap-6">
+                        <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-lg font-bold">采购下单</h4>
+                                {selectedSupplier && <span className="text-[10px] uppercase tracking-widest text-emerald-400">{selectedSupplier.category}</span>}
+                            </div>
+                            <div className="bg-slate-900/50 rounded-2xl p-4 border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">当前选择供应商</p>
+                                {selectedSupplier ? (
+                                    <>
+                                        <p className="font-bold text-white">{selectedSupplier.name}</p>
+                                        <p className="text-xs text-slate-400 mt-1">{selectedSupplier.product}</p>
+                                        <p className="text-sm text-emerald-400 mono mt-2">{selectedSupplier.price}</p>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-slate-400">请先从上方列表选择供应商</p>
+                                )}
+                            </div>
+                            <input value={projectName} onChange={(event) => setProjectName(event.target.value)} className="w-full bg-slate-900/50 border border-white/5 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="项目名称" />
+                            <input value={contactName} onChange={(event) => setContactName(event.target.value)} className="w-full bg-slate-900/50 border border-white/5 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="联系人" />
+                            <input type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="w-full bg-slate-900/50 border border-white/5 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="采购数量" />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-slate-900/50 rounded-xl p-3 border border-white/5">
+                                    <div className="text-[10px] uppercase tracking-widest text-slate-500">预估单价</div>
+                                    <div className="mt-2 text-emerald-400 mono text-sm">{formatCurrency(currentUnitPrice)}</div>
+                                </div>
+                                <div className="bg-slate-900/50 rounded-xl p-3 border border-white/5">
+                                    <div className="text-[10px] uppercase tracking-widest text-slate-500">预估总额</div>
+                                    <div className="mt-2 text-white mono text-sm">{formatCurrency(Number(quantity || 0) * currentUnitPrice)}</div>
+                                </div>
+                            </div>
+                            {submitMessage && <p className="text-sm text-emerald-400">{submitMessage}</p>}
+                            <button onClick={handleCreateOrder} disabled={submitting || !selectedSupplier} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 py-3 rounded-xl text-white font-bold text-sm">
+                                {submitting ? "提交订单中..." : "提交采购订单"}
+                            </button>
+                        </div>
+
+                        <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-lg font-bold">订单中心</h4>
+                                <span className="text-[10px] uppercase tracking-widest text-slate-500">Latest 20</span>
+                            </div>
+                            <div className="flex gap-2">
+                                {[
+                                    { id: "all", label: "全部" },
+                                    { id: "pending_payment", label: "待支付" },
+                                    { id: "completed", label: "已完成" },
+                                ].map((filter) => (
+                                    <button
+                                        key={filter.id}
+                                        onClick={() => setOrderFilter(filter.id)}
+                                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                                            orderFilter === filter.id ? "bg-emerald-600 text-white" : "bg-slate-900/50 text-slate-400 border border-white/5"
+                                        }`}
+                                    >
+                                        {filter.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="space-y-3">
+                                {orders.length === 0 && <div className="text-sm text-slate-400">当前筛选下还没有订单。</div>}
+                                {orders.map((order) => (
+                                    <div key={order.id} className={`bg-slate-900/50 rounded-2xl p-4 border ${selectedOrder && selectedOrder.id === order.id ? "border-emerald-500/40" : "border-white/5"}`}>
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div>
+                                                <div className="font-bold text-white">{order.supplier_name}</div>
+                                                <div className="text-xs text-slate-400 mt-1">{order.supplier_product}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-emerald-400 mono text-sm">{formatCurrency(order.total_amount)}</div>
+                                                <div className={`text-[10px] uppercase tracking-widest ${(statusMap[order.status] || statusMap.pending_payment).className}`}>
+                                                    {(statusMap[order.status] || statusMap.pending_payment).label}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 text-xs text-slate-500">
+                                            项目：{order.project_name} / 联系人：{order.contact_name} / 数量：{order.quantity}{order.unit}
+                                        </div>
+                                        <div className="mt-3 flex justify-between items-center gap-2">
+                                            <button onClick={() => handleViewOrder(order.id)} className="text-[10px] uppercase tracking-widest text-slate-400 hover:text-white">
+                                                查看详情
+                                            </button>
+                                            {order.status === "pending_payment" ? (
+                                                <button onClick={() => openPayModal(order)} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-[10px] font-bold text-white">
+                                                    去付款
+                                                </button>
+                                            ) : (
+                                                <div className="text-[10px] uppercase tracking-widest text-slate-500">已结算</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="glass-card p-6 rounded-[2rem] space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-lg font-bold">订单详情</h4>
+                                {selectedOrder && <span className="text-[10px] uppercase tracking-widest text-slate-500">#{selectedOrder.id}</span>}
+                            </div>
+                            {selectedOrder ? (
+                                <div className="space-y-3">
+                                    <div className="bg-slate-900/50 rounded-xl p-4 border border-white/5">
+                                        <div className="text-sm font-bold text-white">{selectedOrder.supplier_name}</div>
+                                        <div className="text-xs text-slate-400 mt-1">{selectedOrder.supplier_product}</div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-slate-900/50 rounded-xl p-3 border border-white/5">
+                                            <div className="text-[10px] uppercase tracking-widest text-slate-500">订单状态</div>
+                                            <div className={`mt-2 text-sm font-bold ${(statusMap[selectedOrder.status] || statusMap.pending_payment).className}`}>
+                                                {(statusMap[selectedOrder.status] || statusMap.pending_payment).label}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-900/50 rounded-xl p-3 border border-white/5">
+                                            <div className="text-[10px] uppercase tracking-widest text-slate-500">订单总额</div>
+                                            <div className="mt-2 text-sm font-bold text-white mono">{formatCurrency(selectedOrder.total_amount)}</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-900/50 rounded-xl p-4 border border-white/5 text-sm space-y-2">
+                                        <div>项目：<span className="text-white">{selectedOrder.project_name}</span></div>
+                                        <div>联系人：<span className="text-white">{selectedOrder.contact_name}</span></div>
+                                        <div>采购数量：<span className="text-white">{selectedOrder.quantity}{selectedOrder.unit}</span></div>
+                                        <div>单价：<span className="text-white mono">{formatCurrency(selectedOrder.unit_price)}</span></div>
+                                        <div>创建时间：<span className="text-white">{selectedOrder.created_at}</span></div>
+                                        <div>支付方式：<span className="text-white">{selectedOrder.payment_method ? paymentMethodMap[selectedOrder.payment_method] || selectedOrder.payment_method : "待支付"}</span></div>
+                                        <div>支付流水：<span className="text-white">{selectedOrder.payment_reference || "待填写"}</span></div>
+                                        <div>支付时间：<span className="text-white">{selectedOrder.paid_at || "未支付"}</span></div>
+                                    </div>
+                                    {selectedOrder.status === "pending_payment" && (
+                                        <button onClick={() => openPayModal(selectedOrder)} className="w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl text-white font-bold text-sm">
+                                            打开支付弹窗
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-sm text-slate-400">请选择一笔订单查看详情。</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {payingOrder && (
+                        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+                            <div className="w-full max-w-md glass-card rounded-[2rem] p-6 space-y-4 border border-emerald-500/20">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-lg font-bold">订单支付</h4>
+                                    <button onClick={() => setPayingOrder(null)} className="text-slate-500 hover:text-white">
+                                        <Icon name="x" size={18} />
+                                    </button>
+                                </div>
+                                <div className="bg-slate-900/50 rounded-xl p-4 border border-white/5">
+                                    <div className="font-bold text-white">{payingOrder.supplier_name}</div>
+                                    <div className="text-xs text-slate-400 mt-1">{payingOrder.project_name}</div>
+                                    <div className="mt-3 text-emerald-400 mono text-lg">{formatCurrency(payingOrder.total_amount)}</div>
+                                </div>
+                                <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} className="w-full bg-slate-900/50 border border-white/5 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                                    <option value="bank_transfer">银行转账</option>
+                                    <option value="alipay">支付宝</option>
+                                    <option value="wechat_pay">微信支付</option>
+                                </select>
+                                <input value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} className="w-full bg-slate-900/50 border border-white/5 rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="支付流水号" />
+                                <button onClick={handlePayOrder} disabled={paying} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 py-3 rounded-xl text-white font-bold text-sm">
+                                    {paying ? "支付处理中..." : "确认付款完成"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const SocialModule = () => {
+            const [social, setSocial] = useState({ scores: [], summary: {}, alerts: [], feedback: [] });
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState("");
+            const [description, setDescription] = useState("");
+            const [location, setLocation] = useState("未定位");
+            const [submitting, setSubmitting] = useState(false);
+            const [submitMessage, setSubmitMessage] = useState("");
+            const [rejectingAlert, setRejectingAlert] = useState(null);
+            const [rejectionReason, setRejectionReason] = useState("");
+            const [rejectSubmitting, setRejectSubmitting] = useState(false);
+
+            const handleDownloadRectification = (alertId) => {
+                window.open(`/api/social/alerts/${alertId}/download`, "_blank");
+            };
+
+            const handleOpenRejectDialog = (alert) => {
+                setRejectingAlert(alert);
+                setRejectionReason("");
+            };
+
+            const handleRejectAlert = async () => {
+                if (!rejectingAlert) return;
+                if (!rejectionReason.trim()) {
+                    setSubmitMessage("请先填写驳回理由");
+                    return;
+                }
+
+                setRejectSubmitting(true);
+                try {
+                    const updatedAlert = await api.post(`/api/social/alerts/${rejectingAlert.id}/reject`, {
+                        rejection_reason: rejectionReason,
+                    });
+                    setSocial((current) => ({
+                        ...current,
+                        alerts: current.alerts.map((alert) =>
+                            alert.id === updatedAlert.id ? updatedAlert : alert
+                        ),
+                    }));
+                    setSubmitMessage("申诉已驳回，理由已提交");
+                    setRejectingAlert(null);
+                    setRejectionReason("");
+                } catch (err) {
+                    setSubmitMessage(err.message || "驳回提交失败");
+                } finally {
+                    setRejectSubmitting(false);
+                }
+            };
+
+            const loadSocial = async () => {
+                try {
+                    setSocial(await api.get("/api/social"));
+                    setError("");
+                } catch (err) {
+                    setError("社区与劳工数据加载失败");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                loadSocial();
+            }, []);
+
+            const handleSubmit = async () => {
+                if (!description.trim()) {
+                    setSubmitMessage("请先填写反馈内容");
+                    return;
+                }
+
+                setSubmitting(true);
+                setSubmitMessage("");
+                try {
+                    await api.post("/api/social/feedback", {
+                        description,
+                        location,
+                    });
+                    setDescription("");
+                    setSubmitMessage("反馈已提交，系统已生成工单。");
+                    await loadSocial();
+                } catch (err) {
+                    setSubmitMessage(err.message || "反馈提交失败");
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+
+            if (loading) return <LoadingCard text="正在加载社区与劳工数据..." />;
+            if (error) return <ErrorCard text={error} />;
+
+            const latestAlert = social.alerts[0];
+            const latestStatus = social.summary.latest_status || "暂无最新处理动态";
+
+            return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div className="space-y-8">
+                        <div className="glass-card p-8 rounded-[2rem]">
+                            <h3 className="text-xl font-bold mb-8 italic">劳工满意度追踪成绩单</h3>
+                            <div className="space-y-6">
+                                {social.scores.map((score, index) => (
+                                    <div key={index} className="space-y-2">
+                                        <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-tighter">
+                                            <span>{score.label}</span>
+                                            <span className="text-emerald-500 italic font-bold text-sm">{score.score} / 5.0</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500" style={{ width: `${(score.score / 5) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-8 p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-center">
+                                <p className="text-[10px] text-slate-400 mb-1">本月匿名反馈机制收集有效问卷：</p>
+                                <p className="text-2xl font-black text-emerald-500 mono tracking-widest">{social.summary.valid_surveys || "0"}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-rose-500/10 border border-rose-500/20 p-8 rounded-[2rem] space-y-4">
+                            <h4 className="font-bold text-rose-500 flex items-center gap-2"><Icon name="alert-triangle" size={18} /> 社区纠纷预警</h4>
+                            {latestAlert ? (
+                                <div className="bg-slate-900/80 p-5 rounded-2xl border border-rose-500/10">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-2 text-rose-500">来自：{latestAlert.source}</p>
+                                    <p className="text-xs italic mb-4 leading-relaxed">“{latestAlert.content}”</p>
+                                    {latestAlert.status === "rejected" && (
+                                        <div className="mb-4 bg-slate-950/60 border border-amber-500/20 rounded-xl p-3 text-[10px] text-amber-300">
+                                            <div className="font-bold uppercase tracking-widest mb-1">已驳回</div>
+                                            <div>理由：{latestAlert.rejection_reason || "未填写"}</div>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            onClick={() => handleDownloadRectification(latestAlert.id)}
+                                            className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold shadow-lg shadow-rose-900/40 flex items-center gap-2 transition active:scale-95"
+                                        >
+                                            <Icon name="download" size={12} /> 立即下载整改单
+                                        </button>
+                                        <button
+                                            onClick={() => handleOpenRejectDialog(latestAlert)}
+                                            className="bg-slate-800 text-slate-400 px-4 py-2 rounded-xl text-[10px] font-bold border border-white/5 transition active:scale-95"
+                                        >
+                                            驳回申诉
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-900/80 p-5 rounded-2xl text-sm text-slate-400">当前没有社区预警。</div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <div className="mobile-frame shadow-2xl relative flex flex-col">
+                            <div className="bg-emerald-600 p-8 pb-12 rounded-b-[2.5rem] shadow-xl">
+                                <h5 className="text-white font-black text-2xl tracking-tighter italic">社区心连心反馈</h5>
+                                <p className="text-emerald-100 text-[10px] mt-2 opacity-80 uppercase font-bold tracking-widest">Global ESG Listen Hub</p>
+                            </div>
+                            <div className="p-6 -mt-8 flex-1 space-y-5">
+                                <div className="bg-white p-6 rounded-3xl shadow-2xl border border-slate-100">
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-4 tracking-widest">最新处理动态</p>
+                                    <div className="flex items-center gap-3 bg-emerald-50 p-3 rounded-xl border border-emerald-100 mb-6 animate-pulse-slow">
+                                        <Icon name="check-circle" size={14} className="text-emerald-500" />
+                                        <p className="text-[10px] text-emerald-800 font-bold italic">“{latestStatus}”</p>
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-700 mb-3">描述您遇到的问题</p>
+                                    <textarea
+                                        value={description}
+                                        onChange={(event) => setDescription(event.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-[10px] h-24 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-4"
+                                        placeholder="例如：施工噪音、征地反馈..."
+                                    ></textarea>
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <button className="flex flex-col items-center justify-center p-3 border border-dashed border-slate-200 rounded-xl text-slate-400 text-[9px] font-bold"><Icon name="camera" size={16} /><span className="mt-1">照片上传</span></button>
+                                        <button
+                                            onClick={() => setLocation("社区入口定位点")}
+                                            className="flex flex-col items-center justify-center p-3 border border-dashed border-slate-200 rounded-xl text-slate-400 text-[9px] font-bold"
+                                        >
+                                            <Icon name="map-pin" size={16} /><span className="mt-1">{location}</span>
+                                        </button>
+                                    </div>
+                                    {submitMessage && <p className="text-[10px] mb-4 text-emerald-700 font-bold">{submitMessage}</p>}
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={submitting}
+                                        className="w-full bg-emerald-600 py-3 rounded-xl text-white font-bold text-xs shadow-xl active:scale-[0.98] transition-all disabled:opacity-60"
+                                    >
+                                        {submitting ? "提交中..." : "立即提交反馈"}
+                                    </button>
+
+                                    <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
+                                        {(social.feedback || []).slice(0, 3).map((item, index) => (
+                                            <div key={index} className="text-[10px] text-slate-600 bg-slate-50 rounded-xl p-3">
+                                                <div className="font-bold text-slate-700">{item.location}</div>
+                                                <div>{item.description}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="h-14 bg-white border-t border-slate-100 flex items-center justify-around px-10">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {rejectingAlert && (
+                        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+                            <div className="w-full max-w-md glass-card rounded-[2rem] p-6 space-y-4 border border-rose-500/20">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-lg font-bold text-white">驳回申诉</h4>
+                                    <button onClick={() => setRejectingAlert(null)} className="text-slate-500 hover:text-white">
+                                        <Icon name="x" size={18} />
+                                    </button>
+                                </div>
+                                <div className="bg-slate-900/50 rounded-xl p-4 border border-white/5 text-sm text-slate-300">
+                                    <div className="font-bold text-white mb-2">{rejectingAlert.source}</div>
+                                    <div>{rejectingAlert.content}</div>
+                                </div>
+                                <textarea
+                                    value={rejectionReason}
+                                    onChange={(event) => setRejectionReason(event.target.value)}
+                                    className="w-full bg-slate-900/50 border border-white/5 rounded-xl p-3 text-sm h-28 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                                    placeholder="请输入驳回理由..."
+                                ></textarea>
+                                <button
+                                    onClick={handleRejectAlert}
+                                    disabled={rejectSubmitting}
+                                    className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-60 py-3 rounded-xl text-white font-bold text-sm"
+                                >
+                                    {rejectSubmitting ? "提交中..." : "提交驳回理由"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [exporting, setExporting] = useState(false);
+
+            const handleExport = async () => {
+                setExporting(true);
+                try {
+                    const report = await api.get("/api/report");
+                    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `esg-report-${Date.now()}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                } catch (err) {
+                    window.alert("报告导出失败");
+                } finally {
+                    setExporting(false);
+                }
+            };
+
+            return (
+                <div className="flex h-screen">
+                    <aside className="w-64 bg-[#0F172A] border-r border-white/5 flex flex-col">
+                        <div className="p-8 flex items-center gap-3">
+                            <div className="bg-emerald-500 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20"><Icon name="leaf" className="text-white" size={24} /></div>
+                            <span className="font-black text-xl tracking-tighter text-white">ESG Pilot</span>
+                        </div>
+                        <nav className="flex-1 px-4 py-8 space-y-1">
+                            {[
+                                { id: 'dashboard', label: '现场情况监测', icon: 'zap' },
+                                { id: 'compliance', label: 'AI 合规制定', icon: 'shield-check' },
+                                { id: 'supply', label: '供应链生态', icon: 'shopping-cart' },
+                                { id: 'social', label: '社区与劳工', icon: 'users' },
+                            ].map((tab) => (
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${activeTab === tab.id ? 'bg-emerald-500/10 text-emerald-400 shadow-inner' : 'text-slate-500 hover:bg-slate-800'}`}>
+                                    <Icon name={tab.icon} size={18} />
+                                    <span className="font-bold text-sm tracking-wide">{tab.label}</span>
+                                </button>
+                            ))}
+                        </nav>
+                        <div className="p-6 border-t border-white/5 text-[10px] text-slate-600 font-bold uppercase tracking-widest text-center italic">Small Nai Custom V3</div>
+                    </aside>
+
+                    <main className="flex-1 flex flex-col overflow-hidden">
+                        <header className="h-20 border-b border-white/5 bg-[#020617]/50 backdrop-blur-md flex items-center justify-between px-10 z-10">
+                            <div><h2 className="text-xl font-black text-white italic tracking-widest uppercase">
+                                {activeTab === 'dashboard' && '现场实时情况监控中心'}
+                                {activeTab === 'compliance' && 'AI 智能合规制定'}
+                                {activeTab === 'supply' && '绿色供应链地图与采购'}
+                                {activeTab === 'social' && '社区与劳工关系反馈中心'}
+                            </h2></div>
+                            <button
+                                onClick={handleExport}
+                                disabled={exporting}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-full text-[10px] font-bold transition-all shadow-lg shadow-emerald-900/40 disabled:opacity-60"
+                            >
+                                {exporting ? "导出中..." : "导出报告"}
+                            </button>
+                        </header>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-10 bg-[radial-gradient(circle_at_top_right,#1e293b_0%,#020617_50%)]">
+                            {activeTab === 'dashboard' && <IoTMonitoringModule />}
+                            {activeTab === 'compliance' && <AIComplianceModule />}
+                            {activeTab === 'supply' && <SupplyChainModule />}
+                            {activeTab === 'social' && <SocialModule />}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
